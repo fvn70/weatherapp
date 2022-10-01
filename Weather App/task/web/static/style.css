@@ -1,6 +1,6 @@
 .cards {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(25%, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(20%, 1fr));
 	grid-gap: 1vw;
 	grid-auto-rows: 30vw;
 	padding-left: 20%;
@@ -56,6 +56,10 @@ input {
 	background-color: #373252;
 	color: white;
 	box-shadow: 0 0 1vw rgba(0,0,0,0.5);
+}
+
+.autumn {
+	background-image: url("/static/img/autumn.jpg");
 }
 
 .night {
@@ -153,21 +157,3 @@ input {
 	border: none;
 	outline: none;
 }
-
-::-webkit-scrollbar {
-  width: 0.5vw;
-
-  background:-webkit-linear-gradient(0, blue 50%, white 100%);
-}
-
-::-webkit-scrollbar-track {
-  background:  linear-gradient(0deg, #836273 0%, #373252 100%);
-
-::-webkit-scrollbar-thumb {
-  background: #888;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
