@@ -1,25 +1,77 @@
+import datetime
 from random import randint, shuffle
+from sqlite3 import IntegrityError
 
-from flask import Flask, render_template, request
+import requests
+from flask import Flask, render_template, request, redirect
+from flask_sqlalchemy import SQLAlchemy
 import sys
 
+
+# dict = {'class': ['night', 'day', 'evening-morning'],
+#         'degrees': [9, 32, -15],
+#         'state': ['Chilly', 'Sunny', 'Cold'],
+#         'city': ['Boston', 'New York', 'Edmonton'] }
+dict = {}
+key = '564d14ceca893a06ae2b356f125ca60d'
+
 app = Flask(__name__)
-dict = {'name': ['night', 'day', 'evening-morning'],
-        'degrees': [9, 32, -15],
-        'state': ['Chilly', 'Sunny', 'Cold'],
-        'city': ['Boston', 'New York', 'Edmonton'] }
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather.db'
+db = SQLAlchemy(app)
+
+class City(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+
+db.create_all()
+
+def daytime(t):
+    return "night" if 22 <= t <= 23 or 0 <= t <= 3 else "day" if 10 <= t <= 17 else "evening-morning"
+
+def get_data(name):
+    req = requests.get(f'https://api.openweathermap.org/data/2.5/weather?q={name}&units=metric&appid={key}').json()
+    if len(req) > 5:
+        data = {'city': req['name'],
+            'temp': int(req['main']['temp']),
+            'state': req['weather'][0]['main'],
+            'daytime': daytime((datetime.datetime.utcnow() + datetime.timedelta(seconds=req['timezone'])).hour)}
+    else:
+        data = {'city': name,
+            'temp': 0,
+            'state': 'Clear',
+            'daytime': 'day'}
+    return data
+
+def save_data(name):
+    rec = City.query.filter_by(name=name).first()
+    if not rec:
+        rec = City(name=name)
+        db.session.add(rec)
+        db.session.commit()
+
+def read_data():
+    recs = db.session.query(City).all()
+    global dict
+    dict = {}
+    for rec in recs:
+        d = get_data(rec.name)
+        dict.setdefault('class', []).append(d['daytime'])
+        dict.setdefault('degrees', []).append(d['temp'])
+        dict.setdefault('state', []).append(d['state'])
+        dict.setdefault('city', []).append(d['city'])
+
+    db.session.commit()
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
     if request.method == 'POST':
         city_name = request.form['city_name']
-        dict['name'].append('autumn')
-        dict['degrees'].append(randint(-30, 30))
-        shuffle(dict['state'])
-        dict['state'].append(dict['state'][0])
-        dict['city'].append(city_name)
-    num = len(dict['name'])
-    return render_template('index.html', weather=dict, card_num=num)
+        save_data(city_name)
+        return redirect('/')
+    else:
+        read_data()
+        num = len(dict['city']) if dict else 0
+        return render_template('index.html', weather=dict, card_num=num)
 
 # don't change the following way to run flask:
 if __name__ == '__main__':

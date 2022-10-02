@@ -26,14 +26,16 @@
     </form>
 </div>
 <div class="cards">
+    {% if weather %}
     {% for i in range(card_num) %}
-    <div class="card {{ weather['name'][i] }}">
+    <div class="card {{ weather['class'][i] }}">
         <div class="delete-wrapper"></div>
         <div class="degrees"><span>{{ weather['degrees'][i] }}<span class="celsius"> °C</span></span></div>
         <div class="state">{{ weather['state'][i] }}</div>
         <div class="city">{{ weather['city'][i] }}</div>
     </div>
     {% endfor %}
+    {% endif %}
 </div>
 </body>
 </html>
