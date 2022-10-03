@@ -1,27 +1,23 @@
 import datetime
-from random import randint, shuffle
-from sqlite3 import IntegrityError
 
 import requests
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, flash
 from flask_sqlalchemy import SQLAlchemy
 import sys
 
 
-# dict = {'class': ['night', 'day', 'evening-morning'],
-#         'degrees': [9, 32, -15],
-#         'state': ['Chilly', 'Sunny', 'Cold'],
-#         'city': ['Boston', 'New York', 'Edmonton'] }
 dict = {}
-key = '564d14ceca893a06ae2b356f125ca60d'
+key = 'my_key'
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///weather.db'
+app.config['SECRET_KEY'] = 'So-Seckrekt'
 db = SQLAlchemy(app)
 
 class City(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
+    city_id = db.Column(db.Integer, unique=True, nullable=False)
 
 db.create_all()
 
@@ -32,22 +28,26 @@ def get_data(name):
     req = requests.get(f'https://api.openweathermap.org/data/2.5/weather?q={name}&units=metric&appid={key}').json()
     if len(req) > 5:
         data = {'city': req['name'],
+            'city_id': req['id'],
             'temp': int(req['main']['temp']),
             'state': req['weather'][0]['main'],
             'daytime': daytime((datetime.datetime.utcnow() + datetime.timedelta(seconds=req['timezone'])).hour)}
     else:
-        data = {'city': name,
-            'temp': 0,
-            'state': 'Clear',
-            'daytime': 'day'}
+        data = None
     return data
 
 def save_data(name):
-    rec = City.query.filter_by(name=name).first()
-    if not rec:
-        rec = City(name=name)
-        db.session.add(rec)
-        db.session.commit()
+    req = get_data(name)
+    if not req:
+        flash("The city doesn't exist!")
+    else:
+        rec = City.query.filter_by(name=name).first()
+        if not rec:
+            rec = City(name=name, city_id=req['city_id'])
+            db.session.add(rec)
+            db.session.commit()
+        else:
+            flash("The city has already been added to the list!")
 
 def read_data():
     recs = db.session.query(City).all()
@@ -59,8 +59,15 @@ def read_data():
         dict.setdefault('degrees', []).append(d['temp'])
         dict.setdefault('state', []).append(d['state'])
         dict.setdefault('city', []).append(d['city'])
+        dict.setdefault('city_id', []).append(d['city_id'])
 
     db.session.commit()
+
+@app.route('/delete/<city_id>', methods=['POST'])
+def del_card(city_id):
+    City.query.filter_by(city_id=city_id).delete()
+    db.session.commit()
+    return redirect('/')
 
 @app.route('/', methods=['POST', 'GET'])
 def index():

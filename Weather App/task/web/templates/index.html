@@ -29,7 +29,12 @@
     {% if weather %}
     {% for i in range(card_num) %}
     <div class="card {{ weather['class'][i] }}">
-        <div class="delete-wrapper"></div>
+        <div class="delete-wrapper">
+            <form action="/delete/{{weather.city_id[i]}}" method="POST">
+                <input type="hidden" name="id" value="">
+                <button class="delete-button" type="submit">&#10006;</button>
+            </form>
+        </div>
         <div class="degrees"><span>{{ weather['degrees'][i] }}<span class="celsius"> °C</span></span></div>
         <div class="state">{{ weather['state'][i] }}</div>
         <div class="city">{{ weather['city'][i] }}</div>
